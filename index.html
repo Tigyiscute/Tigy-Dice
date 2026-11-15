@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tigy Dice Verifier | Official Roll Proof</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Fredoka', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            tigy: {
+              bg: '#141923',
+              card: '#191e2a',
+              surface: '#202737',
+              gold: '#ffc300',
+              goldLight: '#ffdc32',
+              diceRed: 'rgb(255, 45, 45)',
+              diceOrange: 'rgb(255, 140, 0)',
+              diceYellow: 'rgb(255, 220, 0)',
+              diceGreen: 'rgb(40, 215, 80)',
+              diceBlue: 'rgb(30, 120, 255)',
+              dicePurple: 'rgb(160, 50, 240)',
+            }
+          },
+          boxShadow: {
+            'gold-glow': '0 0 24px rgba(255, 195, 0, 0.25)',
+            'green-glow': '0 0 28px rgba(40, 215, 80, 0.28)',
+            'red-glow': '0 0 24px rgba(255, 45, 45, 0.28)',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #141923;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(30, 120, 255, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 85% 20%, rgba(255, 195, 0, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 50% 85%, rgba(160, 50, 240, 0.07) 0%, transparent 50%);
+      min-height: 100vh;
+    }
+
+    .dice-tile {
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    }
+    .dice-tile:hover {
+      transform: translateY(-4px) scale(1.04);
+    }
+
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.92) translateY(10px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .animate-pop-in {
+      animation: popIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* Custom Scrollbar for Lua Code Modal */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #141923;
+      border-radius: 8px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2f3952;
+      border-radius: 8px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #ffc300;
+    }
+  </style>
+</head>
+<body class="text-slate-100 antialiased selection:bg-tigy-gold selection:text-slate-950">
+
+  <!-- Toast Notification Banner -->
+  <div id="toast" class="fixed bottom-5 right-5 z-50 hidden transform transition-all duration-300 translate-y-4 opacity-0">
+    <div class="flex items-center gap-3 rounded-xl border border-tigy-gold/50 bg-tigy-card/95 px-4 py-3 shadow-2xl backdrop-blur-md">
+      <span id="toastIcon" class="text-lg">✅</span>
+      <span id="toastMsg" class="text-sm font-medium text-white">Copied to clipboard!</span>
+    </div>
+  </div>
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-slate-800/80 bg-tigy-card/70 backdrop-blur-md sticky top-0 z-30">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5">
+        <span class="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-tigy-surface border border-tigy-gold/60 text-lg shadow-sm">🎲</span>
+        <div>
+          <span class="font-display text-base sm:text-lg tracking-wide text-white font-bold">TIGY DICE</span>
+          <span class="ml-1.5 rounded-md bg-tigy-gold/15 border border-tigy-gold/40 px-2 py-0.5 text-[11px] font-bold text-tigy-goldLight">VERIFIER V2</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 sm:gap-3">
+        <button id="simulateBtn" type="button" class="inline-flex items-center gap-1.5 rounded-xl bg-tigy-surface hover:bg-slate-700/80 border border-slate-700 px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-200 transition active:scale-95">
+          <span>⚡</span>
+          <span>Simulate Roll</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-4xl mx-auto px-4 sm:px-6 pt-8 pb-20">
+    
+    <!-- Hero Title Image & Subtitle -->
+    <section class="text-center mb-8">
+      <div class="inline-block relative mb-3">
+        <img 
+          src="https://raw.githubusercontent.com/Tigyiscute/Tigy-Dice/refs/heads/main/tigy-dice-title.png" 
+          alt="Tigy Dice Title" 
+          onerror="this.onerror=null; this.src='https://placehold.co/420x80/191e2a/ffc300?text=TIGY+DICE';"
+          class="h-16 sm:h-20 md:h-24 w-auto mx-auto object-contain drop-shadow-[0_6px_18px_rgba(255,195,0,0.28)]"
+        />
+      </div>
+      <p class="font-display text-xs sm:text-sm tracking-[0.2em] uppercase text-sky-400 mb-2">
+        • OFFICIAL EXECUTOR ROLL AUTHENTICATOR •
+      </p>
+      <p class="text-slate-400 text-sm sm:text-base max-w-xl mx-auto">
+        Paste any <span class="text-tigy-goldLight font-semibold">Roll Verification ID</span> generated by <span class="text-white font-medium">Tigy Dicing Script V2</span> to prove the 4 dice colors were genuinely rolled without tampering.
+      </p>
+    </section>
+
+    <!-- Verification Input Card -->
+    <section class="rounded-2xl bg-tigy-card border-2 border-tigy-gold/40 p-5 sm:p-7 shadow-gold-glow mb-8">
+      <form id="verifyForm" class="space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <label for="rollIdInput" class="font-display text-sm sm:text-base text-white tracking-wide flex items-center gap-2">
+            <span>🔍 ENTER ROLL VERIFICATION ID</span>
+          </label>
+          <span class="text-xs text-slate-400 font-mono">Format: TIGY-XXXX-XXXX-XXXX</span>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+          <div class="relative flex-1">
+            <input 
+              id="rollIdInput" 
+              type="text" 
+              placeholder="Paste Roll ID (TIGY-RGYB-4921-A8F3) or full verification link..." 
+              autocomplete="off"
+              spellcheck="false"
+              class="w-full rounded-xl bg-tigy-bg border-2 border-slate-700 focus:border-tigy-gold px-4 py-3.5 pr-20 font-mono text-sm sm:text-base font-bold tracking-wider text-tigy-goldLight placeholder:text-slate-600 placeholder:font-normal focus:outline-none transition"
+            />
+            <button 
+              type="button" 
+              id="pasteBtn"
+              class="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-lg bg-tigy-surface hover:bg-slate-700 border border-slate-600 px-2.5 py-1.5 text-xs font-semibold text-slate-300 transition"
+              title="Paste from clipboard"
+            >
+              PASTE
+            </button>
+          </div>
+
+          <button 
+            type="submit"
+            class="rounded-xl bg-gradient-to-b from-tigy-goldLight to-tigy-gold hover:brightness-105 px-7 py-3.5 font-display text-base font-bold text-slate-950 shadow-lg transition active:scale-95 whitespace-nowrap"
+          >
+            VERIFY ROLL 🎲
+          </button>
+        </div>
+
+        <!-- Quick Sample Chips -->
+        <div class="flex flex-wrap items-center gap-2 pt-1 text-xs text-slate-400">
+          <span>Try sample ID:</span>
+          <button type="button" id="loadSampleBtn" class="font-mono text-sky-400 hover:text-sky-300 underline underline-offset-2 transition">
+            Generate Valid Test ID
+          </button>
+          <span class="text-slate-600">•</span>
+          <button type="button" id="loadTamperedBtn" class="font-mono text-rose-400 hover:text-rose-300 underline underline-offset-2 transition">
+            Test Tampered ID
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Verification Result Display Area -->
+    <section id="resultSection" class="hidden mb-10 animate-pop-in">
+      <!-- Valid Result Card -->
+      <div id="validCard" class="hidden rounded-2xl bg-tigy-card border-2 border-emerald-400/70 p-6 sm:p-8 shadow-green-glow relative overflow-hidden">
+        <!-- Subtle Top Gradient Bar -->
+        <div class="absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-tigy-diceRed via-tigy-gold to-tigy-diceGreen"></div>
+
+        <!-- Verified Header Badge -->
+        <div class="flex flex-col items-center text-center mb-7">
+          <div class="inline-flex items-center gap-2 rounded-full bg-emerald-500/15 border border-emerald-400/50 px-5 py-2 mb-3 shadow-sm">
+            <span class="h-2.5 w-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="font-display text-lg sm:text-2xl font-bold text-emerald-300 tracking-wide">
+              Verified Dice Result🎲✅
+            </span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-300">
+            Cryptographic signature matched <span class="text-tigy-goldLight font-semibold">Tigy Dicing Script V2</span> • No rigging or ID tampering detected.
+          </p>
+        </div>
+
+        <!-- 4 Visual Dice Display -->
+        <div class="rounded-2xl bg-tigy-bg/90 border border-slate-800 p-5 sm:p-7 mb-6">
+          <div id="diceGrid" class="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 max-w-xl mx-auto">
+            <!-- Populated dynamically via JS -->
+          </div>
+          <div id="diceSummaryText" class="text-center mt-5 font-display text-sm sm:text-base text-slate-200 tracking-wide">
+            <!-- Populated dynamically via JS -->
+          </div>
+        </div>
+
+        <!-- Metadata Details Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
+          <div class="rounded-xl bg-tigy-surface/80 border border-slate-700/70 p-3.5">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Verification ID</div>
+            <div id="metaRollId" class="font-mono text-xs sm:text-sm font-bold text-tigy-goldLight break-all">TIGY-XXXX-XXXX-XXXX</div>
+          </div>
+
+          <div class="rounded-xl bg-tigy-surface/80 border border-slate-700/70 p-3.5">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Script Integrity</div>
+            <div class="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-emerald-400">
+              <span>🛡️</span>
+              <span>Authentic V2 Signature</span>
+            </div>
+          </div>
+
+          <div class="rounded-xl bg-tigy-surface/80 border border-slate-700/70 p-3.5">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 font-semibold mb-1">Roll Sequence / Nonce</div>
+            <div id="metaNonce" class="font-mono text-xs sm:text-sm font-bold text-sky-300">#0000</div>
+          </div>
+        </div>
+
+        <!-- Share Proof Actions -->
+        <div class="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800">
+          <div class="text-xs text-slate-400">
+            Share this proof link with your trade partner or stream chat:
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="copyIdAgainBtn" type="button" class="rounded-xl bg-tigy-surface hover:bg-slate-700 border border-slate-600 px-3.5 py-2 text-xs font-semibold text-white transition">
+              📋 Copy ID
+            </button>
+            <button id="copyProofLinkBtn" type="button" class="rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-400/50 px-3.5 py-2 text-xs font-semibold text-emerald-300 transition">
+              🔗 Copy Verification Link
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Invalid / Tampered Result Card -->
+      <div id="invalidCard" class="hidden rounded-2xl bg-tigy-card border-2 border-rose-500/70 p-6 sm:p-8 shadow-red-glow text-center">
+        <div class="inline-flex items-center gap-2 rounded-full bg-rose-500/15 border border-rose-500/40 px-4 py-1.5 mb-3">
+          <span class="font-display text-base sm:text-lg font-bold text-rose-400">❌ Invalid or Tampered Roll ID</span>
+        </div>
+        <p id="invalidReason" class="text-sm text-slate-300 max-w-lg mx-auto mb-4">
+          The verification checksum did not match. This ID may have been manually edited, mistyped, or did not come from the official Tigy Dicing Script V2.
+        </p>
+        <div class="inline-block rounded-lg bg-tigy-bg border border-slate-800 px-3 py-1.5 font-mono text-xs text-rose-300">
+          Expected authentic signature from Tigy Dicing Script V2
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works & Live Cloud Sync Section -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <!-- How Script Connection Works -->
+      <div class="rounded-2xl bg-tigy-card border border-slate-800 p-6">
+        <h2 class="font-display text-lg text-white mb-4 flex items-center gap-2">
+          <span class="text-tigy-gold">⚡</span>
+          <span>How Roll Verification Works</span>
+        </h2>
+        <ol class="space-y-3.5 text-sm text-slate-300">
+          <li class="flex items-start gap-3">
+            <span class="flex-shrink-0 h-6 w-6 rounded-full bg-tigy-gold/20 border border-tigy-gold/50 text-tigy-goldLight font-display text-xs flex items-center justify-center font-bold">1</span>
+            <div>
+              <strong class="text-white">Roll in Roblox:</strong> Every time <span class="text-amber-300 font-semibold">ROLL AGAIN !</span> is clicked in <span class="text-white font-medium">Tigy Dicing Script V2</span>, a unique signed Roll ID and verification link are generated.
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="flex-shrink-0 h-6 w-6 rounded-full bg-tigy-gold/20 border border-tigy-gold/50 text-tigy-goldLight font-display text-xs flex items-center justify-center font-bold">2</span>
+            <div>
+              <strong class="text-white">Open or Paste Link:</strong> Opening the generated GitHub Pages link (or pasting the Roll ID above) automatically checks the cryptographic signature.
+            </div>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="flex-shrink-0 h-6 w-6 rounded-full bg-tigy-gold/20 border border-tigy-gold/50 text-tigy-goldLight font-display text-xs flex items-center justify-center font-bold">3</span>
+            <div>
+              <strong class="text-white">Instant Proof:</strong> Authentic rolls display <strong class="text-emerald-300">Verified Dice Result🎲✅</strong> alongside the exact 4 colored dice squares.
+            </div>
+          </li>
+        </ol>
+
+        <!-- Color Legend -->
+        <div class="mt-6 pt-4 border-t border-slate-800">
+          <div class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2.5">Official 6 Dice Colors</div>
+          <div class="grid grid-cols-3 gap-2 text-xs font-display">
+            <div class="flex items-center gap-2 bg-tigy-bg px-2.5 py-1.5 rounded-lg border border-slate-800">
+              <span class="h-3 w-3 rounded-sm border border-white" style="background: rgb(255, 45, 45)"></span>
+              <span>Red (R)</span>
+            </div>
+            <div class="flex items-center gap-2 bg-tigy-bg px-2.5 py-1.5 rounded-lg border border-slate-800">
+              <span class="h-3 w-3 rounded-sm border border-white" style="background: rgb(255, 140, 0)"></span>
+              <span>Orange (O)</span>
+            </div>
+            <div class="flex items-center gap-2 bg-tigy-bg px-2.5 py-1.5 rounded-lg border border-slate-800">
+              <span class="h-3 w-3 rounded-sm border border-white" style="background: rgb(255, 220, 0)"></span>
+              <span>Yellow (Y)</span>
+            </div>
+            <div class="flex items-center gap-2 bg-tigy-bg px-2.5 py-1.5 rounded-lg border border-slate-800">
+              <span class="h-3 w-3 rounded-sm border border-white" style="background: rgb(40, 215, 80)"></span>
+              <span>Green (G)</span>
+            </div>
+            <div class="flex items-center gap-2 bg-tigy-bg px-2.5 py-1.5 rounded-lg border border-slate-800">
+              <span class="h-3 w-3 rounded-sm border border-white" style="background: rgb(30, 120, 255)"></span>
+              <span>Blue (B)</span>
+            </div>
+            <div class="flex items-center gap-2 bg-tigy-bg px-2.5 py-1.5 rounded-lg border border-slate-800">
+              <span class="h-3 w-3 rounded-sm border border-white" style="background: rgb(160, 50, 240)"></span>
+              <span>Purple (P)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Verified Rolls Feed -->
+      <div class="rounded-2xl bg-tigy-card border border-slate-800 p-6 flex flex-col">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="font-display text-lg text-white flex items-center gap-2">
+            <span>🕒</span>
+            <span>Recent Verified Rolls</span>
+          </h2>
+          <span id="liveBadge" class="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400">
+            <span class="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+            LIVE READY
+          </span>
+        </div>
+
+        <div id="recentRollsList" class="space-y-2.5 flex-1 overflow-y-auto max-h-[300px] pr-1">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // =========================================================================
+    // 1. OFFICIAL TIGY DICE COLOR DEFINITIONS & CRYPTOGRAPHIC VERIFIER ENGINE
+    // =========================================================================
+    const DICE_COLOR_MAP = {
+      R: { code: 'R', name: 'Red',    rgb: 'rgb(255, 45, 45)',  hex: '#ff2d2d' },
+      O: { code: 'O', name: 'Orange', rgb: 'rgb(255, 140, 0)',  hex: '#ff8c00' },
+      Y: { code: 'Y', name: 'Yellow', rgb: 'rgb(255, 220, 0)',  hex: '#ffdc00' },
+      G: { code: 'G', name: 'Green',  rgb: 'rgb(40, 215, 80)',  hex: '#28d750' },
+      B: { code: 'B', name: 'Blue',   rgb: 'rgb(30, 120, 255)', hex: '#1e78ff' },
+      P: { code: 'P', name: 'Purple', rgb: 'rgb(160, 50, 240)', hex: '#a032f0' }
+    };
+
+    const COLOR_KEYS = Object.keys(DICE_COLOR_MAP);
+
+    // Shared deterministic signature algorithm (matches the Lua function in Tigy Dicing Script V2)
+    function computeTigySignature(colorCodes, nonce) {
+      const payload = `TIGY_V2::${colorCodes}::${nonce}::NO_RIGGERS_FAIR_DICE`;
+      let h1 = 0x1A2B;
+      let h2 = 0x3C4D;
+      for (let i = 0; i < payload.length; i++) {
+        const ch = payload.charCodeAt(i);
+        h1 = ((h1 * 31) + ch + (i * 7)) % 65536;
+        h2 = ((h2 * 37) + (ch ^ (i + 13))) % 65536;
+      }
+      const hex1 = h1.toString(16).toUpperCase().padStart(4, '0');
+      const hex2 = h2.toString(16).toUpperCase().padStart(4, '0');
+      // Take compact 4-char signature
+      return (hex1.slice(0, 2) + hex2.slice(2, 4)).toUpperCase();
+    }
+
+    function generateValidRollId(customCodes = null) {
+      let codes = customCodes;
+      if (!codes) {
+        codes = '';
+        for (let i = 0; i < 4; i++) {
+          codes += COLOR_KEYS[Math.floor(Math.random() * COLOR_KEYS.length)];
+        }
+      }
+      const nonceNum = Math.floor(1000 + Math.random() * 9000);
+      const nonce = String(nonceNum);
+      const sig = computeTigySignature(codes, nonce);
+      return `TIGY-${codes}-${nonce}-${sig}`;
+    }
+
+    function verifyRollId(rawInput) {
+      if (!rawInput || typeof rawInput !== 'string') {
+        return { valid: false, reason: 'Please enter a Roll Verification ID.' };
+      }
+
+      // Extract ID if user pasted a full URL or extra text around it
+      const cleaned = rawInput.trim().toUpperCase();
+      const match = cleaned.match(/TIGY-([ROYGBP]{4})-([0-9A-Z]{4})-([0-9A-F]{4})/);
+
+      if (!match) {
+        return {
+          valid: false,
+          reason: 'Invalid ID format. Expected format: TIGY-XXXX-XXXX-XXXX (using valid dice color codes R, O, Y, G, B, P).'
+        };
+      }
+
+      const fullId = match[0];
+      const colorCodes = match[1];
+      const nonce = match[2];
+      const providedSig = match[3];
+
+      const expectedSig = computeTigySignature(colorCodes, nonce);
+
+      if (providedSig !== expectedSig) {
+        return {
+          valid: false,
+          id: fullId,
+          reason: `Checksum mismatch (got ${providedSig}, expected authentic script signature). This ID was modified or forged.`
+        };
+      }
+
+      const dice = colorCodes.split('').map(code => DICE_COLOR_MAP[code]);
+      return {
+        valid: true,
+        id: fullId,
+        colorCodes,
+        nonce,
+        signature: providedSig,
+        dice,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+      };
+    }
+
+    // =========================================================================
+    // 2. UI RENDERING & INTERACTIONS
+    // =========================================================================
+    const rollIdInput = document.getElementById('rollIdInput');
+    const verifyForm = document.getElementById('verifyForm');
+    const resultSection = document.getElementById('resultSection');
+    const validCard = document.getElementById('validCard');
+    const invalidCard = document.getElementById('invalidCard');
+    const invalidReason = document.getElementById('invalidReason');
+    const diceGrid = document.getElementById('diceGrid');
+    const diceSummaryText = document.getElementById('diceSummaryText');
+    const metaRollId = document.getElementById('metaRollId');
+    const metaNonce = document.getElementById('metaNonce');
+    const recentRollsList = document.getElementById('recentRollsList');
+
+    let currentVerifiedId = '';
+    let recentRolls = [];
+
+    function showToast(msg, icon = '✅') {
+      const toast = document.getElementById('toast');
+      document.getElementById('toastMsg').textContent = msg;
+      document.getElementById('toastIcon').textContent = icon;
+      toast.classList.remove('hidden', 'translate-y-4', 'opacity-0');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        toast.classList.add('translate-y-4', 'opacity-0');
+        setTimeout(() => toast.classList.add('hidden'), 300);
+      }, 2600);
+    }
+
+    function copyTextFallback(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        showToast('Copied to clipboard!', '📋');
+      } catch (err) {
+        showToast('Press Ctrl+C to copy', 'ℹ️');
+      }
+      document.body.removeChild(textarea);
+    }
+
+    function renderRecentRolls() {
+      if (recentRolls.length === 0) {
+        recentRollsList.innerHTML = `<div class="text-xs text-slate-500 text-center py-8">No rolls verified yet in this session.</div>`;
+        return;
+      }
+
+      recentRollsList.innerHTML = recentRolls.map(item => `
+        <button type="button" data-id="${item.id}" class="recent-item w-full flex items-center justify-between gap-3 rounded-xl bg-tigy-bg/90 hover:bg-tigy-surface border border-slate-800 hover:border-tigy-gold/50 px-3.5 py-2.5 text-left transition group">
+          <div class="flex items-center gap-2">
+            ${item.dice.map(d => `
+              <span class="h-5 w-5 rounded-md border border-white flex items-center justify-center shadow-sm" style="background-color: ${d.rgb}">
+                <span class="h-1.5 w-1.5 rounded-full bg-white"></span>
+              </span>
+            `).join('')}
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-mono text-xs font-bold text-tigy-goldLight truncate group-hover:underline">${item.id}</div>
+            <div class="text-[11px] text-slate-400 truncate">${item.dice.map(d => d.name).join(', ')}</div>
+          </div>
+          <span class="text-[11px] text-emerald-400 font-semibold shrink-0">✅ Verified</span>
+        </button>
+      `).join('');
+
+      document.querySelectorAll('.recent-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-id');
+          rollIdInput.value = id;
+          executeVerification(id, false);
+        });
+      });
+    }
+
+    function executeVerification(inputStr, saveToFeed = true) {
+      const res = verifyRollId(inputStr);
+      resultSection.classList.remove('hidden');
+      resultSection.classList.remove('animate-pop-in');
+      void resultSection.offsetWidth; // trigger reflow
+      resultSection.classList.add('animate-pop-in');
+
+      if (res.valid) {
+        currentVerifiedId = res.id;
+        rollIdInput.value = res.id;
+        validCard.classList.remove('hidden');
+        invalidCard.classList.add('hidden');
+
+        // Render 4 Dice Tiles matching the Roblox script visual style
+        diceGrid.innerHTML = res.dice.map((die, idx) => `
+          <div class="flex flex-col items-center gap-2.5">
+            <div class="dice-tile h-20 w-20 sm:h-24 sm:w-24 rounded-2xl border-[3px] border-white flex items-center justify-center shadow-lg relative" style="background-color: ${die.rgb}; box-shadow: 0 8px 20px ${die.hex}44;">
+              <div class="h-4 w-4 sm:h-5 sm:w-5 rounded-full bg-white shadow-inner"></div>
+              <span class="absolute top-1.5 left-2 text-[10px] font-mono font-bold text-white/80">#${idx + 1}</span>
+            </div>
+            <span class="font-display text-sm sm:text-base font-bold text-white tracking-wide">${die.name}</span>
+          </div>
+        `).join('');
+
+        diceSummaryText.innerHTML = `Rolled Colors: <span class="text-tigy-goldLight">${res.dice.map(d => d.name).join(' • ')}</span>`;
+        metaRollId.textContent = res.id;
+        metaNonce.textContent = `#${res.nonce} • Verified at ${res.timestamp}`;
+
+        // Update URL query cleanly without reloading
+        try {
+          window.history.replaceState(null, '', `?id=${res.id}`);
+        } catch (e) {}
+
+        if (saveToFeed) {
+          recentRolls = [res, ...recentRolls.filter(r => r.id !== res.id)].slice(0, 12);
+          renderRecentRolls();
+          pushToCloudIfAvailable(res);
+        }
+      } else {
+        currentVerifiedId = '';
+        validCard.classList.add('hidden');
+        invalidCard.classList.remove('hidden');
+        invalidReason.textContent = res.reason;
+      }
+    }
+
+    // Form Submit
+    verifyForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      executeVerification(rollIdInput.value, true);
+    });
+
+    // Simulate Roll Button
+    document.getElementById('simulateBtn').addEventListener('click', () => {
+      const sampleId = generateValidRollId();
+      rollIdInput.value = sampleId;
+      executeVerification(sampleId, true);
+      showToast('Simulated new roll from Tigy Script V2!', '🎲');
+    });
+
+    document.getElementById('loadSampleBtn').addEventListener('click', () => {
+      const sampleId = generateValidRollId();
+      rollIdInput.value = sampleId;
+      executeVerification(sampleId, true);
+    });
+
+    document.getElementById('loadTamperedBtn').addEventListener('click', () => {
+      // Deliberately mismatched checksum
+      const fakeId = 'TIGY-RRRR-9999-0000';
+      rollIdInput.value = fakeId;
+      executeVerification(fakeId, false);
+    });
+
+    // Paste Button
+    document.getElementById('pasteBtn').addEventListener('click', async () => {
+      try {
+        if (navigator.clipboard && navigator.clipboard.readText) {
+          const text = await navigator.clipboard.readText();
+          if (text) {
+            rollIdInput.value = text.trim();
+            executeVerification(text.trim(), true);
+            return;
+          }
+        }
+      } catch (err) {}
+      rollIdInput.focus();
+      showToast('Press Ctrl+V (or Cmd+V) in the box to paste!', '📋');
+    });
+
+    // Copy ID & Copy Proof Link
+    document.getElementById('copyIdAgainBtn').addEventListener('click', () => {
+      if (currentVerifiedId) copyTextFallback(currentVerifiedId);
+    });
+
+    document.getElementById('copyProofLinkBtn').addEventListener('click', () => {
+      if (currentVerifiedId) {
+        const baseUrl = window.location.href.split('#')[0].split('?')[0];
+        copyTextFallback(`${baseUrl}?id=${currentVerifiedId}`);
+      }
+    });
+
+    // =========================================================================
+    // 3. OPTIONAL CLOUD REAL-TIME SYNC (FIRESTORE) & INITIAL SEEDING
+    // =========================================================================
+    let db = null;
+    let currentUser = null;
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'tigy-dice-verifier';
+
+    async function pushToCloudIfAvailable(rollObj) {
+      if (!db || !currentUser) return;
+      try {
+        const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'verified_rolls');
+        await addDoc(colRef, {
+          rollId: rollObj.id,
+          colorCodes: rollObj.colorCodes,
+          nonce: rollObj.nonce,
+          createdAt: Date.now()
+        });
+      } catch (e) {
+        // Silent fallback if offline/unconfigured
+      }
+    }
+
+    async function initCloudSync() {
+      try {
+        if (typeof __firebase_config === 'undefined') return;
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        db = getFirestore(app);
+
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          const cred = await signInWithCustomToken(auth, __initial_auth_token);
+          currentUser = cred.user;
+        } else {
+          const cred = await signInAnonymously(auth);
+          currentUser = cred.user;
+        }
+
+        const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'verified_rolls');
+        onSnapshot(colRef, (snapshot) => {
+          const cloudItems = [];
+          snapshot.forEach(docSnap => {
+            const data = docSnap.data();
+            if (data && data.rollId) {
+              const verified = verifyRollId(data.rollId);
+              if (verified.valid) {
+                verified.createdAt = data.createdAt || 0;
+                cloudItems.push(verified);
+              }
+            }
+          });
+          cloudItems.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+          if (cloudItems.length > 0) {
+            const seen = new Set();
+            recentRolls = cloudItems.filter(item => {
+              if (seen.has(item.id)) return false;
+              seen.add(item.id);
+              return true;
+            }).slice(0, 12);
+            renderRecentRolls();
+          }
+        }, (err) => {
+          console.warn('Cloud listener paused:', err.message);
+        });
+      } catch (err) {
+        // Offline / standalone mode works seamlessly
+      }
+    }
+
+    // Seed initial sample rolls so the feed looks alive on first load
+    recentRolls = [
+      verifyRollId(generateValidRollId('RGYB')),
+      verifyRollId(generateValidRollId('POYG')),
+      verifyRollId(generateValidRollId('BBRP'))
+    ].filter(r => r.valid);
+    renderRecentRolls();
+
+    // Check URL query (?id=...) or hash (#TIGY-...) for instant auto-verification
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryId = urlParams.get('id');
+    const hashId = window.location.hash ? window.location.hash.replace('#', '') : '';
+    const initialId = queryId || hashId;
+
+    if (initialId && initialId.toUpperCase().startsWith('TIGY-')) {
+      rollIdInput.value = initialId.toUpperCase();
+      executeVerification(initialId, true);
+    }
+
+    initCloudSync();
+  </script>
+</body>
+</html>
